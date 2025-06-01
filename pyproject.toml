@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gxucnm"
+version = "0.1.0"
+description = "GXU Campus Network Manager"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["requests>=2.32.3"]
+
+[project.scripts]
+gxucnm = "src.cli:main"
+
+[tool.uv]
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+[tool.setuptools]
+package-dir = { gxucnm = "src" }
+
+[tool.setuptools.packages]
+find = {}
