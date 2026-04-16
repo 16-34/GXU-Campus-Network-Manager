@@ -11,7 +11,7 @@ requires-python = ">=3.12"
 dependencies = ["requests>=2.32.3", "python-dotenv>=1.1.0", "ruff>=0.15.10"]
 
 [project.scripts]
-gxucnm = "src.cli:main"
+gxucnm = "gxucnm.cli:main"
 
 [tool.uv]
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
@@ -20,8 +20,5 @@ index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
 
-[tool.setuptools]
-package-dir = { gxucnm = "src" }
-
-[tool.setuptools.packages]
-find = {}
+[tool.setuptools.packages.find]
+where = ["src"]

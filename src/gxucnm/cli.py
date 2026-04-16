@@ -3,8 +3,8 @@ import logging
 from pathlib import Path
 
 from dotenv import load_dotenv
-from src.GXUCampusNetworkManager import GXUCampusNetworkManager
-from src.daemon import run as daemon_run
+from gxucnm.network import GXUCampusNetworkManager
+from gxucnm.daemon import run as daemon_run
 
 
 def main():

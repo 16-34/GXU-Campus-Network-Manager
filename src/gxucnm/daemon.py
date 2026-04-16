@@ -3,7 +3,7 @@ import signal
 import time
 from datetime import datetime
 
-from src.GXUCampusNetworkManager import GXUCampusNetworkManager
+from gxucnm.network import GXUCampusNetworkManager
 
 PAUSE_START = 0
 PAUSE_END = 7
