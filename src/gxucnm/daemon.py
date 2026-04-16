@@ -37,7 +37,8 @@ def run(
 
     signal.signal(signal.SIGINT, handle_stop)
     signal.signal(signal.SIGTERM, handle_stop)
-    signal.signal(signal.SIGUSR1, handle_toggle)
+    if hasattr(signal, "SIGUSR1"):
+        signal.signal(signal.SIGUSR1, handle_toggle)
 
     logger.info(
         f"守护进程启动 — 检测间隔 {check_interval}s，重试 {retry_max} 次，失败冷却 {FAIL_COOLDOWN}s"
