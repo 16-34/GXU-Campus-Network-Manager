@@ -22,7 +22,10 @@ def main():
     args = parser.parse_args()
     gxucnm = GXUCampusNetworkManager()
 
-    if args.command == "info":
+    if args.command is None:
+        parser.print_help()
+        return
+    elif args.command == "info":
         print("网络状态: \t", "已连接" if gxucnm.test() else "未连接")
         print("本地 IP 地址: \t", gxucnm.get_local_ip())
     elif args.command == "login":

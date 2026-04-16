@@ -32,7 +32,7 @@ class GXUCampusNetworkManager:
             response = requests.get(url, params=params)
             return response.status_code, response.text
         except Exception:
-            return -1
+            return -1, ""
 
     @classmethod
     def logout(cls):
@@ -42,7 +42,7 @@ class GXUCampusNetworkManager:
             response = requests.get(url)
             return response.status_code, response.text
         except Exception:
-            return -1
+            return -1, ""
 
     @classmethod
     def test(cls):
