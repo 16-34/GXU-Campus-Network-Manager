@@ -1,6 +1,12 @@
-import requests
-import socket
 import os
+import socket
+
+import requests
+
+_TEST_URLS = [
+    "http://connect.rom.miui.com/generate_204",
+    "http://connectivitycheck.platform.hicloud.com/generate_204",
+]
 
 
 class GXUCampusNetworkManager:
@@ -46,17 +52,14 @@ class GXUCampusNetworkManager:
 
     @classmethod
     def test(cls):
-        """测试网络通断"""
-        try:
-            return (
-                requests.get(
-                    "http://connect.rom.miui.com/generate_204",
-                    timeout=0.5,
-                ).status_code
-                == 204
-            )
-        except Exception:
-            return False
+        """测试网络通断，逐一尝试多个检测端点，任意一个返回 204 即为在线"""
+        for url in _TEST_URLS:
+            try:
+                if requests.get(url, timeout=0.5).status_code == 204:
+                    return True
+            except Exception:
+                continue
+        return False
 
     @classmethod
     def get_local_ip(cls):
@@ -79,11 +82,3 @@ class GXUCampusNetworkManager:
                 raise RuntimeError("未找到有效局域网IP")
             except Exception as e:
                 raise RuntimeError(f"无法自动获取IP，请手动填写: {str(e)}")
-
-
-if __name__ == "__main__":
-    gxucnm = GXUCampusNetworkManager()
-    print(gxucnm.get_local_ip())
-    print(gxucnm.test())
-    # print(gxucn.login())
-    # print(gxucn.test())
