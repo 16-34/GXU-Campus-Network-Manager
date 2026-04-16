@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=65"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "gxucnm"
-version = "0.1.0"
+version = "0.2.0"
 description = "GXU Campus Network Manager"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -13,12 +13,12 @@ dependencies = ["requests>=2.32.3", "python-dotenv>=1.1.0", "ruff>=0.15.10"]
 [project.scripts]
 gxucnm = "gxucnm.cli:main"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/gxucnm"]
+
 [tool.uv]
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
-
-[tool.setuptools.packages.find]
-where = ["src"]
