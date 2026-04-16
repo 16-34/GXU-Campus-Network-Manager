@@ -1,9 +1,12 @@
 import argparse
+from pathlib import Path
 
+from dotenv import load_dotenv
 from src.GXUCampusNetworkManager import GXUCampusNetworkManager
 
 
 def main():
+    load_dotenv()
     parser = argparse.ArgumentParser(description="GXU Campus Network Manager")
     subparsers = parser.add_subparsers(dest="command")
 
