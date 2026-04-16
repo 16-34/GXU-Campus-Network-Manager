@@ -29,8 +29,8 @@ def main():
         "-i",
         "--interval",
         type=int,
-        default=30,
-        help="检测间隔（秒），默认 30",
+        default=15,
+        help="检测间隔（秒），默认 15",
     )
     daemon_parser.add_argument(
         "-r",
