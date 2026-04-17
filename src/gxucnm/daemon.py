@@ -47,8 +47,8 @@ def run(
         if is_paused():
             now = datetime.now()
             resume = now.replace(hour=PAUSE_END, minute=0, second=0, microsecond=0)
-            wait = int((resume - now).total_seconds())
-            logger.info(f"工作日 0:00-{PAUSE_END}:00 暂停，{wait}s 后恢复")
+            wait = int((resume - now).total_seconds()) + 1
+            logger.info(f"工作日 {PAUSE_START}:00-{PAUSE_END}:00 暂停，{wait}s 后恢复")
             stop_event.wait(min(wait, 300))
             continue
 
