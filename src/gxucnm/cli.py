@@ -1,5 +1,6 @@
 import argparse
 import logging
+import sys
 
 from dotenv import load_dotenv
 from gxucnm.network import GXUCampusNetworkManager
@@ -51,6 +52,13 @@ def main():
     autostart_sub = autostart_parser.add_subparsers(dest="autostart_action")
     autostart_sub.add_parser("install", help="安装自启动")
     autostart_sub.add_parser("uninstall", help="卸载自启动")
+    logs_parser = autostart_sub.add_parser("logs", help="查看守护进程日志")
+    logs_parser.add_argument(
+        "-n", "--lines", type=int, default=50, help="显示最近 N 行（默认 50）"
+    )
+    logs_parser.add_argument(
+        "-f", "--follow", action="store_true", help="实时跟踪日志"
+    )
 
     args = parser.parse_args()
 
@@ -62,6 +70,8 @@ def main():
             autostart.install()
         elif args.autostart_action == "uninstall":
             autostart.uninstall()
+        elif args.autostart_action == "logs":
+            autostart.logs(follow=args.follow, lines=args.lines)
         else:
             autostart_parser.print_help()
         return
@@ -70,6 +80,7 @@ def main():
             level=logging.INFO,
             format="%(asctime)s [%(levelname)s] %(message)s",
             datefmt="%H:%M:%S",
+            stream=sys.stdout,
         )
         daemon_run(
             check_interval=args.interval,

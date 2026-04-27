@@ -45,6 +45,12 @@ uv run gxucnm autostart install
 
 # 卸载开机自启动
 uv run gxucnm autostart uninstall
+
+# 查看守护进程日志（最近 50 行）
+uv run gxucnm autostart logs
+
+# 实时跟踪日志
+uv run gxucnm autostart logs -f
 ```
 
 ### 守护模式参数
@@ -80,3 +86,11 @@ kill -USR1 <pid>
 | Windows | VBS 启动脚本（启动文件夹） |
 
 使用 `uninstall` 即可移除：`uv run gxucnm autostart uninstall`
+
+检查运行状态与日志（也可用统一命令 `uv run gxucnm autostart logs [-f]`）：
+
+| 系统 | 查看状态 | 查看日志 |
+|------|----------|----------|
+| macOS | `launchctl list \| grep gxucnm` | `tail -f ~/Library/Logs/com.gxucnm.daemon.log` |
+| Linux | `systemctl --user status gxucnm-daemon` | `journalctl --user -u gxucnm-daemon -f` |
+| Windows | 任务管理器查看 `uv` 进程 | `%LOCALAPPDATA%\gxucnm\gxucnm-daemon.log` |
