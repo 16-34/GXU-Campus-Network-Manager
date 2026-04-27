@@ -39,13 +39,19 @@ uv run gxucnm daemon
 
 # 自定义守护参数
 uv run gxucnm daemon -i 60 -r 5 -w 10
+
+# 安装开机自启动（macOS / Linux / Windows）
+uv run gxucnm autostart install
+
+# 卸载开机自启动
+uv run gxucnm autostart uninstall
 ```
 
 ### 守护模式参数
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `-i` / `--interval` | 检测间隔（秒） | 30 |
+| `-i` / `--interval` | 检测间隔（秒） | 15 |
 | `-r` / `--retry` | 断网时最大重试次数 | 3 |
 | `-w` / `--wait` | 重试等待间隔（秒） | 5 |
 
@@ -62,3 +68,15 @@ kill -USR1 <pid>
 ```
 
 按 `Ctrl+C` 或发送 `SIGTERM` 正常退出守护进程。
+
+### 开机自启动
+
+`uv run gxucnm autostart install` 一键安装，自动识别操作系统：
+
+| 系统 | 实现方式 |
+|------|----------|
+| macOS | LaunchAgent（`~/Library/LaunchAgents/`） |
+| Linux | systemd 用户单元（`~/.config/systemd/user/`） |
+| Windows | VBS 启动脚本（启动文件夹） |
+
+使用 `uninstall` 即可移除：`uv run gxucnm autostart uninstall`

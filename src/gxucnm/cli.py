@@ -1,10 +1,10 @@
 import argparse
 import logging
-from pathlib import Path
 
 from dotenv import load_dotenv
 from gxucnm.network import GXUCampusNetworkManager
 from gxucnm.daemon import run as daemon_run
+from gxucnm import autostart
 
 
 def main():
@@ -47,10 +47,23 @@ def main():
         help="重试等待间隔（秒），默认 5",
     )
 
+    autostart_parser = subparsers.add_parser("autostart", help="管理开机自启动")
+    autostart_sub = autostart_parser.add_subparsers(dest="autostart_action")
+    autostart_sub.add_parser("install", help="安装自启动")
+    autostart_sub.add_parser("uninstall", help="卸载自启动")
+
     args = parser.parse_args()
 
     if args.command is None:
         parser.print_help()
+        return
+    elif args.command == "autostart":
+        if args.autostart_action == "install":
+            autostart.install()
+        elif args.autostart_action == "uninstall":
+            autostart.uninstall()
+        else:
+            autostart_parser.print_help()
         return
     elif args.command == "daemon":
         logging.basicConfig(
