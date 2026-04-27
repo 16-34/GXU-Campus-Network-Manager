@@ -5,25 +5,47 @@
 ## 安装
 
 ```bash
+# 开发/本地使用
 uv sync
+
+# 全局安装（通过 pipx）
+pipx install .
 ```
+安装后可直接使用 `gxucnm` 命令，无需 `uv run` 前缀。
 
 ## 配置
 
-在项目根目录创建 `.env` 文件：
+凭据加载优先级：**CLI 参数 > 环境变量 > 配置文件**
+
+配置文件 `.env` 可放在两个位置（任一即可）：
+- 项目根目录（开发时）
+- **全局配置目录**（推荐，pipx 安装后唯一可用位置）：
+
+| 系统 | 配置目录 |
+|------|----------|
+| macOS | `~/Library/Application Support/gxucnm/.env` |
+| Linux | `~/.config/gxucnm/.env` |
+| Windows | `%APPDATA%\gxucnm\.env` |
 
 ```
 GXUCNM_USERNAME=你的学号
 GXUCNM_PASSWORD=你的密码
 ```
 
-也可以通过 CLI 参数手动传入凭据，优先级：CLI 参数 > 环境变量 > `.env` 文件。
-
 ## 用法
 
 ```bash
 # 查看网络状态和本机 IP
 uv run gxucnm info
+
+# 设置凭据（交互式）
+uv run gxucnm config set
+
+# 设置凭据（参数式）
+uv run gxucnm config set -u 学号 -p 密码
+
+# 查看当前凭据状态
+uv run gxucnm config
 
 # 登录（使用 .env 或环境变量中的凭据）
 uv run gxucnm login
@@ -77,13 +99,15 @@ kill -USR1 <pid>
 
 ### 开机自启动
 
-`uv run gxucnm autostart install` 一键安装，自动识别操作系统：
+`uv run gxucnm autostart install` 一键安装，自动识别操作系统和运行方式：
 
 | 系统 | 实现方式 |
 |------|----------|
 | macOS | LaunchAgent（`~/Library/LaunchAgents/`） |
 | Linux | systemd 用户单元（`~/.config/systemd/user/`） |
 | Windows | VBS 启动脚本（启动文件夹） |
+
+安装时会自动检测当前运行方式，输出 `[源码 (uv run)]` 或 `[已安装 (pipx/pip)]`。
 
 使用 `uninstall` 即可移除：`uv run gxucnm autostart uninstall`
 

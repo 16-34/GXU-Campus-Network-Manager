@@ -1,15 +1,39 @@
 import argparse
+import getpass
 import logging
+import os
 import sys
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 from gxucnm.network import GXUCampusNetworkManager
 from gxucnm.daemon import run as daemon_run
 from gxucnm import autostart
 
 
+def _resolve_credentials(cli_user="", cli_pass=""):
+    """解析凭据：CLI → 环境变量 → .env → 交互输入"""
+    user = cli_user or os.getenv("GXUCNM_USERNAME", "")
+    password = cli_pass or os.getenv("GXUCNM_PASSWORD", "")
+
+    if not user:
+        user = input("校园网账号: ").strip()
+    if not password:
+        password = getpass.getpass("校园网密码: ")
+
+    if user and password:
+        env_path = str(autostart.config_dir() / ".env")
+        set_key(env_path, "GXUCNM_USERNAME", user)
+        set_key(env_path, "GXUCNM_PASSWORD", password)
+        os.environ["GXUCNM_USERNAME"] = user
+        os.environ["GXUCNM_PASSWORD"] = password
+        print(f"✓ 凭据已保存至 {env_path}")
+
+    return user, password
+
+
 def main():
     load_dotenv()
+    load_dotenv(autostart.config_dir() / ".env")
     parser = argparse.ArgumentParser(description="GXU Campus Network Manager")
     subparsers = parser.add_subparsers(dest="command")
 
@@ -48,6 +72,16 @@ def main():
         help="重试等待间隔（秒），默认 5",
     )
 
+    config_parser = subparsers.add_parser("config", help="管理凭据")
+    config_sub = config_parser.add_subparsers(dest="config_action")
+    set_parser = config_sub.add_parser("set", help="设置凭据")
+    set_parser.add_argument(
+        "-u", "--username", type=str, default="", help="校园网账户用户名"
+    )
+    set_parser.add_argument(
+        "-p", "--password", type=str, default="", help="校园网账户密码"
+    )
+
     autostart_parser = subparsers.add_parser("autostart", help="管理开机自启动")
     autostart_sub = autostart_parser.add_subparsers(dest="autostart_action")
     autostart_sub.add_parser("install", help="安装自启动")
@@ -65,6 +99,15 @@ def main():
     if args.command is None:
         parser.print_help()
         return
+    elif args.command == "config":
+        if args.config_action == "set":
+            _resolve_credentials(args.username, args.password)
+        else:
+            user = os.getenv("GXUCNM_USERNAME", "")
+            print(f"用户名: {'(已设置)' if user else '(未设置)'}")
+            print(f"密码:   {'(已设置)' if os.getenv('GXUCNM_PASSWORD', '') else '(未设置)'}")
+            print(f"配置文件: {autostart.config_dir() / '.env'}")
+        return
     elif args.command == "autostart":
         if args.autostart_action == "install":
             autostart.install()
@@ -76,6 +119,7 @@ def main():
             autostart_parser.print_help()
         return
     elif args.command == "daemon":
+        _resolve_credentials()
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s [%(levelname)s] %(message)s",
@@ -94,7 +138,8 @@ def main():
         print("网络状态: \t", "已连接" if gxucnm.test() else "未连接")
         print("本地 IP 地址: \t", gxucnm.get_local_ip())
     elif args.command == "login":
-        status, content = gxucnm.login(args.username, args.password)
+        username, password = _resolve_credentials(args.username, args.password)
+        status, content = gxucnm.login(username, password)
         print(status, content)
     elif args.command == "logout":
         status, content = gxucnm.logout()

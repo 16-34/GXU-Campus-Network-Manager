@@ -2,6 +2,7 @@ import os
 import shutil
 import platform
 import subprocess
+import time
 from pathlib import Path
 
 SYSTEM = platform.system()
@@ -14,6 +15,43 @@ def _run(cmd, *, check=True, **kwargs):
     subprocess.run(cmd, check=check, **kwargs)
 
 
+# ── 配置目录 ────────────────────────────────────────────────────
+def config_dir():
+    if SYSTEM == "Darwin":
+        return Path.home() / "Library/Application Support/gxucnm"
+    elif SYSTEM == "Windows":
+        return Path(os.environ["APPDATA"]) / "gxucnm"
+    else:
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        return Path(xdg) / "gxucnm" if xdg else Path.home() / ".config/gxucnm"
+
+
+_CONFIG = config_dir()
+_CONFIG.mkdir(parents=True, exist_ok=True)
+
+
+# ── 执行方式检测：源码模式 vs pipx/pip 安装模式 ─────────────────
+def _detect_exec():
+    """检测运行模式，返回 (daemon_cmd, work_dir)。
+    源码模式：uv run gxucnm daemon，工作目录为项目根目录
+    安装模式：gxucnm daemon，工作目录为 HOME
+    """
+    pyproject = PROJECT_DIR / "pyproject.toml"
+    if pyproject.exists():
+        try:
+            content = pyproject.read_text()
+            if "gxucnm" in content:
+                return (UV, "run", "gxucnm"), str(PROJECT_DIR)
+        except Exception:
+            pass
+    gxucnm = shutil.which("gxucnm") or "gxucnm"
+    return (gxucnm,), str(Path.home())
+
+
+_DAEMON_CMD, _WORK_DIR = _detect_exec()
+_IS_SOURCE = len(_DAEMON_CMD) > 1  # uv run gxucnm → 3 tokens；gxucnm → 1 token
+
+
 # ── macOS ──────────────────────────────────────────────────────
 _MACOS_PLIST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -23,13 +61,9 @@ _MACOS_PLIST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
     <string>com.gxucnm.daemon</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{uv}</string>
-        <string>run</string>
-        <string>gxucnm</string>
-        <string>daemon</string>
-    </array>
+{program_args}    </array>
     <key>WorkingDirectory</key>
-    <string>{project_dir}</string>
+    <string>{work_dir}</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
@@ -41,24 +75,33 @@ _MACOS_PLIST_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>"""
 
-
 _MACOS_SERVICE = "com.gxucnm.daemon"
 _MACOS_PLIST = "com.gxucnm.daemon.plist"
 
 
+def _macos_plist_xml():
+    args_lines = ""
+    for arg in _DAEMON_CMD + ("daemon",):
+        args_lines += f"        <string>{arg}</string>\n"
+    log_dir = Path.home() / "Library/Logs"
+    return _MACOS_PLIST_TEMPLATE.format(
+        program_args=args_lines, work_dir=_WORK_DIR, log_dir=log_dir
+    )
+
+
 def _install_macos():
-    plist_path = Path.home() / "Library/LaunchAgents" / _MACOS_PLIST
     log_dir = Path.home() / "Library/Logs"
     log_dir.mkdir(parents=True, exist_ok=True)
+    plist_path = Path.home() / "Library/LaunchAgents" / _MACOS_PLIST
     plist_path.parent.mkdir(parents=True, exist_ok=True)
-
-    plist_path.write_text(
-        _MACOS_PLIST_TEMPLATE.format(
-            uv=UV, project_dir=PROJECT_DIR, log_dir=log_dir
-        )
-    )
+    plist_path.write_text(_macos_plist_xml())
     _run(["launchctl", "bootout", f"gui/{os.getuid()}/{_MACOS_SERVICE}"], check=False, stderr=_DEVNULL)
-    _run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist_path)])
+    time.sleep(0.3)
+    try:
+        _run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist_path)])
+    except subprocess.CalledProcessError:
+        time.sleep(0.5)
+        _run(["launchctl", "bootstrap", f"gui/{os.getuid()}", str(plist_path)])
     return plist_path
 
 
@@ -75,8 +118,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory={project_dir}
-ExecStart={uv} run gxucnm daemon
+WorkingDirectory={work_dir}
+ExecStart=env "GXUCNM_CONFIG_DIR={config_dir}" {exec_cmd}
 Restart=always
 RestartSec=10
 
@@ -89,8 +132,11 @@ def _install_linux():
     unit_dir = Path.home() / ".config/systemd/user"
     unit_dir.mkdir(parents=True, exist_ok=True)
     unit_path = unit_dir / "gxucnm-daemon.service"
+    exec_cmd = " ".join(_DAEMON_CMD + ("daemon",))
     unit_path.write_text(
-        _LINUX_SERVICE_TEMPLATE.format(uv=UV, project_dir=PROJECT_DIR)
+        _LINUX_SERVICE_TEMPLATE.format(
+            exec_cmd=exec_cmd, work_dir=_WORK_DIR, config_dir=_CONFIG
+        )
     )
     _run(["systemctl", "--user", "daemon-reload"])
     _run(["systemctl", "--user", "enable", "--now", "gxucnm-daemon"])
@@ -106,7 +152,8 @@ def _uninstall_linux():
 # ── Windows ────────────────────────────────────────────────────
 _WIN_VBS_TEMPLATE = (
     'CreateObject("Wscript.Shell").Run '
-    '"cmd /c cd /d ""{project_dir}"" && ""{uv}"" run gxucnm daemon '
+    '"cmd /c set GXUCNM_CONFIG_DIR={config_dir} && '
+    'cd /d ""{work_dir}"" && {exec_cmd} '
     '>> ""{log_dir}\\gxucnm-daemon.log"" 2>&1", 0, False'
 )
 
@@ -119,8 +166,12 @@ def _install_windows():
         / "Microsoft/Windows/Start Menu/Programs/Startup"
     )
     vbs_path = startup / "gxucnm-daemon.vbs"
+    exec_cmd = " ".join(f'""{a}""' for a in _DAEMON_CMD + ("daemon",))
     vbs_path.write_text(
-        _WIN_VBS_TEMPLATE.format(uv=UV, project_dir=PROJECT_DIR, log_dir=log_dir)
+        _WIN_VBS_TEMPLATE.format(
+            exec_cmd=exec_cmd, work_dir=_WORK_DIR,
+            config_dir=_CONFIG, log_dir=log_dir,
+        )
     )
     return vbs_path
 
@@ -145,7 +196,8 @@ def install():
     if SYSTEM not in _INSTALLERS:
         raise RuntimeError(f"不支持的操作系统: {SYSTEM}")
     path = _INSTALLERS[SYSTEM][0]()
-    print(f"✓ 自启动已安装并启动 → {path}")
+    mode = "源码 (uv run)" if _IS_SOURCE else "已安装 (pipx/pip)"
+    print(f"✓ 自启动已安装并启动 [{mode}] → {path}")
 
 
 def uninstall():
